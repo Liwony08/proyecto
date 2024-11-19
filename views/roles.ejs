@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://unpkg.com/boxicons@2.0.7/css/boxicons.min.css" rel="stylesheet">
+    <title>Gestión de Roles</title>
+    <style>
+        /* Estilos generales */
+        body {
+            background-color: #f5f7fa;
+            font-family: Arial, sans-serif;
+            color: #333;
+        }
+        /* Barra de navegación */
+        .navbar {
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            background-color: #004085;
+        }
+        .navbar-brand {
+            font-weight: bold;
+            font-size: 1.5rem;
+            color: #fff !important;
+        }
+        .navbar-nav .nav-link {
+            color: #ddd !important;
+            font-weight: 500;
+            transition: color 0.3s;
+        }
+        .navbar-nav .nav-link:hover {
+            color: #fff !important;
+        }
+        /* Contenedor principal */
+        .container {
+            margin-top: 40px;
+        }
+        .card {
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        }
+        .card-header {
+            font-size: 1.5rem;
+            background-color: #007bff;
+            color: #fff;
+            text-align: center;
+            font-weight: bold;
+            border-top-left-radius: 12px;
+            border-top-right-radius: 12px;
+        }
+        /* Botón de crear rol */
+        .btn-primary {
+            background-color: #007bff;
+            border: none;
+            font-weight: bold;
+            transition: background-color 0.3s, transform 0.3s;
+        }
+        .btn-primary:hover {
+            background-color: #0056b3;
+            transform: scale(1.05);
+        }
+        /* Tabla */
+        .table {
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        .table thead th {
+            background-color: #007bff;
+            color: white;
+            font-weight: bold;
+        }
+        /* Botones de acciones */
+        .btn-warning, .btn-danger {
+            font-size: 0.9rem;
+            font-weight: bold;
+            transition: transform 0.3s;
+        }
+        .btn-warning:hover, .btn-danger:hover {
+            transform: scale(1.05);
+        }
+        .btn-warning {
+            background-color: #ffc107;
+            border: none;
+            color: #333;
+        }
+        .btn-warning:hover {
+            background-color: #e0a800;
+        }
+        .btn-danger {
+            background-color: #dc3545;
+            border: none;
+        }
+        .btn-danger:hover {
+            background-color: #c82333;
+        }
+    </style>
+</head>
+<body>
+    <!-- Barra de navegación -->
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/"><i class='bx bx-home'></i> App</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/"><i class='bx bx-home-alt'></i> Inicio</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/roles"><i class='bx bx-user-circle'></i> Roles</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/settings"><i class='bx bx-cog'></i> Configuración</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Contenido principal -->
+    <div class="container mt-4">
+        <div class="card border-secondary">
+            <div class="card-header">Gestión de Roles</div>
+            <div class="card-body">
+                <!-- Botón de Crear Rol -->
+                <a href="/roles/create" class="btn btn-primary mb-3">
+                    <i class='bx bxs-plus-circle'></i> Crear Rol
+                </a>
+
+                <!-- Tabla de roles -->
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover table-striped text-center">
+                        <thead>
+                            <tr>
+                                <th scope="col">ID</th>
+                                <th scope="col">Nombre del Rol</th>
+                                <th scope="col">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% roles.forEach(function(role) { %>
+                                <tr>
+                                    <td><%= role.id %></td>
+                                    <td><%= role.role_name %></td>
+                                    <td>
+                                        <a href="/roles/edit/<%= role.id %>" class="btn btn-warning me-2">
+                                            <i class='bx bxs-edit'></i> Editar
+                                        </a>
+                                        <a href="/roles/delete/<%= role.id %>" class="btn btn-danger">
+                                            <i class='bx bxs-trash-alt'></i> Eliminar
+                                        </a>
+                                    </td>
+                                </tr>
+                            <% }); %>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript de Bootstrap -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta1/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

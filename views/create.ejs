@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://unpkg.com/boxicons@2.0.7/css/boxicons.min.css" rel="stylesheet">
+    <title>CRUD - Crear Usuario</title>
+    <style>
+        /* Estilos generales */
+        body {
+            background-color: #f5f7fa;
+            font-family: Arial, sans-serif;
+            color: #333;
+        }
+        /* Barra de navegación */
+        .navbar {
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            background-color: #004085;
+        }
+        .navbar-brand {
+            font-weight: bold;
+            font-size: 1.5rem;
+            color: #fff !important;
+        }
+        .navbar-nav .nav-link {
+            color: #ddd !important;
+            font-weight: 500;
+            transition: color 0.3s;
+        }
+        .navbar-nav .nav-link:hover {
+            color: #fff !important;
+        }
+        /* Contenedor del formulario */
+        .container {
+            margin-top: 40px;
+        }
+        .card {
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        }
+        .card-header {
+            font-size: 1.5rem;
+            background-color: #007bff;
+            color: #fff;
+            text-align: center;
+            font-weight: bold;
+            border-top-left-radius: 12px;
+            border-top-right-radius: 12px;
+        }
+        /* Botón de guardar */
+        .btn-primary {
+            background-color: #007bff;
+            border: none;
+            font-weight: bold;
+            transition: background-color 0.3s, transform 0.3s;
+        }
+        .btn-primary:hover {
+            background-color: #0056b3;
+            transform: scale(1.05);
+        }
+        .btn-secondary {
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <!-- Barra de navegación -->
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/"><i class='bx bx-home'></i> App</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/"><i class='bx bx-home-alt'></i> Inicio</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/roles"><i class='bx bx-user-circle'></i> Roles</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/settings"><i class='bx bx-cog'></i> Configuración</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Contenedor principal del formulario -->
+    <div class="container mt-4">
+        <div class="card border-secondary">
+            <div class="card-header">Nuevo Registro</div>
+            <div class="card-body">
+                <form action="/save" method="POST">
+                    <div class="mb-3">
+                        <label for="user" class="form-label">Usuario</label>
+                        <input type="text" class="form-control" id="user" name="user" tabindex="1" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="rol" class="form-label">Rol</label>
+                        <select id="rol" name="rol" class="form-select" tabindex="2" required>
+                            <% roles.forEach((rol) => { %>
+                                <option value="<%= rol.id %>"><%= rol.role_name %></option>
+                            <% }); %>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary"><i class='bx bxs-save'></i> Guardar</button>
+                    <a href="/users" class="btn btn-secondary ms-2"><i class='bx bx-x'></i> Cancelar</a>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript de Bootstrap -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta1/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
