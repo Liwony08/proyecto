@@ -1,28 +1,20 @@
 const express = require('express');
-const router = express.Router();
 const bcrypt = require('bcryptjs');
 const conexion = require('./database/db');
+const router = express.Router();
 
 // Middleware para comprobar si el usuario está autenticado
 function isAuthenticated(req, res, next) {
     if (req.session.user) {
         return next();
     }
+    req.flash('errorMessage', 'Debes iniciar sesión para acceder a esta página.');
     res.redirect('/login');
 }
 
-// Cerrar sesión
-router.get('/logout', (req, res) => {
-    req.session.destroy(err => {
-        if (err) {
-            return res.redirect('/home');
-        }
-        res.clearCookie('connect.sid');
-        res.redirect('/login');
-    });
-});
+// ------------------------- Rutas de Autenticación -------------------------
 
-// Redirigir la raíz
+// Página de inicio (redirección según sesión)
 router.get('/', (req, res) => {
     if (req.session.user) {
         res.redirect('/home');
@@ -31,61 +23,73 @@ router.get('/', (req, res) => {
     }
 });
 
-
-// Registro de usuario
-router.get('/register', (req, res) => {
-    res.render('register');
-});
-
-router.post('/register', async (req, res) => {
-    const { username, password } = req.body;
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    // Guardar el usuario en la base de datos
-    conexion.query('INSERT INTO usersregister (username, password) VALUES (?, ?)', [username, hashedPassword], (error, results) => {
-        if (error) {
-            console.error(error);
-            res.send('Error al registrar al usuario');
-        } else {
-            req.session.user = username;
-            res.redirect('/home');
-        }
-    });
-});
-// Ruta para la página de presentación (landing)
+// Página de presentación
 router.get('/landing', (req, res) => {
     res.render('landing');
 });
 
+// Página de registro
+router.get('/register', (req, res) => {
+    res.render('register');
+});
 
-// Inicio de sesión
+// Procesar registro
+router.post('/register', async (req, res) => {
+    const { username, password } = req.body;
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    conexion.query('INSERT INTO usersregister (username, password) VALUES (?, ?)', [username, hashedPassword], (error) => {
+        if (error) {
+            console.error(error);
+            req.flash('errorMessage', 'Error al registrar al usuario.');
+            res.redirect('/register');
+        } else {
+            req.flash('successMessage', 'Usuario registrado exitosamente.');
+            res.redirect('/login');
+        }
+    });
+});
+
+// Página de inicio de sesión
 router.get('/login', (req, res) => {
     res.render('login');
 });
 
+// Procesar inicio de sesión
 router.post('/login', (req, res) => {
     const { username, password } = req.body;
 
     conexion.query('SELECT * FROM usersregister WHERE username = ?', [username], async (error, results) => {
-        if (error) {
-            console.error(error);
-            res.send('Error al iniciar sesión');
-        } else if (results.length === 0 || !await bcrypt.compare(password, results[0].password)) {
-            res.send('Credenciales inválidas');
+        if (error || results.length === 0 || !(await bcrypt.compare(password, results[0].password))) {
+            req.flash('errorMessage', 'Credenciales inválidas.');
+            res.redirect('/login');
         } else {
             req.session.user = username;
+            req.flash('successMessage', 'Inicio de sesión exitoso.');
             res.redirect('/home');
         }
     });
 });
 
-// Página de inicio
+// Cerrar sesión
+router.get('/logout', (req, res) => {
+    req.session.destroy((err) => {
+        if (err) return res.redirect('/home');
+        res.clearCookie('connect.sid');
+        req.flash('successMessage', 'Sesión cerrada exitosamente.');
+        res.redirect('/login');
+    });
+});
+
+// Página principal
 router.get('/home', isAuthenticated, (req, res) => {
     res.render('home', { user: req.session.user });
 });
 
-// Rutas para usuarios
-router.get('/users', (req, res) => {
+// ------------------------- Rutas de Usuarios -------------------------
+
+// Listar usuarios
+router.get('/users', isAuthenticated, (req, res) => {
     const query = `
         SELECT users.id, users.username AS user, roles.role_name AS rol
         FROM users
@@ -94,231 +98,160 @@ router.get('/users', (req, res) => {
     `;
     conexion.query(query, (error, results) => {
         if (error) {
-            throw error;
+            console.error(error);
+            req.flash('errorMessage', 'Error al obtener los usuarios.');
+            res.redirect('/home');
         } else {
-            res.render('index.ejs', { results: results });
+            res.render('users/index', { results });
         }
     });
 });
 
-
-
-
-
-
+// Crear usuario
 router.get('/users/create', isAuthenticated, (req, res) => {
     conexion.query('SELECT * FROM roles', (error, results) => {
-        if (error) throw error;
-        res.render('create.ejs', { roles: results });
-    });
-});
-
-router.get('/users/edit/:id', isAuthenticated, (req, res) => {
-    const id = req.params.id;
-    const getUserQuery = `
-        SELECT users.id, users.username, user_rol.rol_id
-        FROM users
-        LEFT JOIN user_rol ON users.id = user_rol.user_id
-        WHERE users.id = ?
-    `;
-    conexion.query(getUserQuery, [id], (error, userResults) => {
-        if (error) throw error;
-        const getRolesQuery = 'SELECT * FROM roles';
-        conexion.query(getRolesQuery, (error, roleResults) => {
-            if (error) throw error;
-            const user = userResults[0];
-            res.render('edit.ejs', { user: user, roles: roleResults });
-        });
-    });
-});
-
-
-router.get('/users/delete/:id', isAuthenticated, (req, res) => {
-    const id = req.params.id;
-    conexion.beginTransaction((err) => {
-        if (err) {
-            console.log(err);
+        if (error) {
+            console.error(error);
+            req.flash('errorMessage', 'Error al obtener roles.');
             res.redirect('/users');
+        } else {
+            res.render('users/create', { roles: results });
         }
-        conexion.query('DELETE FROM user_rol WHERE user_id = ?', [id], (error, results) => {
-            if (error) {
-                return conexion.rollback(() => {
-                    console.log(error);
-                    res.redirect('/users');
-                });
-            }
-            conexion.query('DELETE FROM users WHERE id = ?', [id], (error, results) => {
-                if (error) {
-                    return conexion.rollback(() => {
-                        console.log(error);
-                        res.redirect('/users');
-                    });
-                }
-                conexion.commit((err) => {
-                    if (err) {
-                        return conexion.rollback(() => {
-                            console.log(err);
-                            res.redirect('/users');
-                        });
-                    }
-                    res.redirect('/users');
-                });
-            });
-        });
     });
 });
 
-router.post('/save', (req, res) => {
-    const { user, rol } = req.body;
-    const query = "INSERT INTO users (username) VALUES (?)";
-    conexion.query(query, [user], (err, result) => {
-        if (err) {
-            console.error(err);
-            res.send('Error');
+// Guardar nuevo usuario
+router.post('/users/save', isAuthenticated, (req, res) => {
+    const { username, rol } = req.body;
+
+    conexion.query('INSERT INTO users (username) VALUES (?)', [username], (error, result) => {
+        if (error) {
+            console.error(error);
+            req.flash('errorMessage', 'Error al guardar el usuario.');
+            res.redirect('/users');
         } else {
             const userId = result.insertId;
-            const roleQuery = "INSERT INTO user_rol (user_id, rol_id) VALUES (?, ?)";
-            conexion.query(roleQuery, [userId, rol], (err, result) => {
-                if (err) {
-                    console.error(err);
-                    res.send('Error');
+            conexion.query('INSERT INTO user_rol (user_id, rol_id) VALUES (?, ?)', [userId, rol], (error) => {
+                if (error) {
+                    console.error(error);
+                    req.flash('errorMessage', 'Error al asignar rol al usuario.');
                 } else {
-                    res.redirect('/users');
+                    req.flash('successMessage', 'Usuario creado exitosamente.');
                 }
+                res.redirect('/users');
             });
         }
     });
 });
 
+// Editar usuario
+router.get('/users/edit/:id', isAuthenticated, (req, res) => {
+    const id = req.params.id;
 
-router.post('/update', isAuthenticated, (req, res) => {
-    const { id, username, rol } = req.body;
-    const updateUserQuery = 'UPDATE users SET username = ? WHERE id = ?';
-    conexion.query(updateUserQuery, [username, id], (error, results) => {
-        if (error) throw error;
-        const updateUserRolQuery = 'UPDATE user_rol SET rol_id = ? WHERE user_id = ?';
-        conexion.query(updateUserRolQuery, [rol, id], (error, results) => {
-            if (error) throw error;
+    conexion.query('SELECT * FROM users WHERE id = ?', [id], (error, results) => {
+        if (error) {
+            console.error(error);
+            req.flash('errorMessage', 'Error al obtener el usuario.');
             res.redirect('/users');
-        });
+        } else {
+            res.render('users/edit', { user: results[0] });
+        }
     });
 });
 
+// Actualizar usuario
+router.post('/users/update', isAuthenticated, (req, res) => {
+    const { id, username, rol } = req.body;
 
-// Rutas para roles
+    conexion.query('UPDATE users SET username = ? WHERE id = ?', [username, id], (error) => {
+        if (error) {
+            console.error(error);
+            req.flash('errorMessage', 'Error al actualizar el usuario.');
+            res.redirect('/users');
+        } else {
+            conexion.query('UPDATE user_rol SET rol_id = ? WHERE user_id = ?', [rol, id], (error) => {
+                if (error) {
+                    console.error(error);
+                    req.flash('errorMessage', 'Error al actualizar el rol del usuario.');
+                } else {
+                    req.flash('successMessage', 'Usuario actualizado exitosamente.');
+                }
+                res.redirect('/users');
+            });
+        }
+    });
+});
+
+// Eliminar usuario
+router.get('/users/delete/:id', isAuthenticated, (req, res) => {
+    const id = req.params.id;
+
+    conexion.query('DELETE FROM user_rol WHERE user_id = ?', [id], (error) => {
+        if (error) {
+            console.error(error);
+            req.flash('errorMessage', 'Error al eliminar el usuario.');
+            res.redirect('/users');
+        } else {
+            conexion.query('DELETE FROM users WHERE id = ?', [id], (error) => {
+                if (error) {
+                    console.error(error);
+                    req.flash('errorMessage', 'Error al eliminar el usuario.');
+                } else {
+                    req.flash('successMessage', 'Usuario eliminado exitosamente.');
+                }
+                res.redirect('/users');
+            });
+        }
+    });
+});
+
+// ------------------------- Rutas de Roles -------------------------
+
 router.get('/roles', isAuthenticated, (req, res) => {
     conexion.query('SELECT * FROM roles', (error, results) => {
-        if (error) throw error;
-        res.render('roles.ejs', { roles: results });
+        if (error) {
+            console.error(error);
+            req.flash('errorMessage', 'Error al obtener los roles.');
+            res.redirect('/home');
+        } else {
+            res.render('roles/index', { roles: results });
+        }
     });
 });
 
+// Crear rol
 router.get('/roles/create', isAuthenticated, (req, res) => {
-    res.render('createRole');
+    res.render('roles/create');
 });
 
+// Guardar nuevo rol
 router.post('/roles/save', isAuthenticated, (req, res) => {
     const { role_name } = req.body;
-    conexion.query('INSERT INTO roles (role_name) VALUES (?)', [role_name], (error, results) => {
-        if (error) throw error;
+
+    conexion.query('INSERT INTO roles (role_name) VALUES (?)', [role_name], (error) => {
+        if (error) {
+            console.error(error);
+            req.flash('errorMessage', 'Error al guardar el rol.');
+        } else {
+            req.flash('successMessage', 'Rol creado exitosamente.');
+        }
         res.redirect('/roles');
     });
 });
 
-router.get('/roles/edit/:id', isAuthenticated, (req, res) => {
-    const id = req.params.id;
-    conexion.query('SELECT * FROM roles WHERE id = ?', [id], (error, results) => {
-        if (error) throw error;
-        res.render('editRole', { role: results[0] });
-    });
-});
-
-router.post('/roles/update', isAuthenticated, (req, res) => {
-    const { id, role_name } = req.body;
-    const updateRoleQuery = 'UPDATE roles SET role_name = ? WHERE id = ?';
-    conexion.query(updateRoleQuery, [role_name, id], (error, results) => {
-        if (error) throw error;
-        res.redirect('/roles');
-    });
-});
-
+// Eliminar rol
 router.get('/roles/delete/:id', isAuthenticated, (req, res) => {
     const id = req.params.id;
-    conexion.query('DELETE FROM roles WHERE id = ?', [id], (error, results) => {
-        if (error) throw error;
+
+    conexion.query('DELETE FROM roles WHERE id = ?', [id], (error) => {
+        if (error) {
+            console.error(error);
+            req.flash('errorMessage', 'Error al eliminar el rol.');
+        } else {
+            req.flash('successMessage', 'Rol eliminado exitosamente.');
+        }
         res.redirect('/roles');
     });
 });
-
-// Rutas para tareas
-router.get('/tasks', (req, res) => {
-    const query = `
-        SELECT tasks.id, tasks.title, tasks.description, tasks.start_date, tasks.start_time, tasks.end_date, tasks.end_time, 
-               users.username AS assigned_user, roles.role_name AS user_role
-        FROM tasks
-        LEFT JOIN users ON tasks.user_id = users.id
-        LEFT JOIN user_rol ON users.id = user_rol.user_id
-        LEFT JOIN roles ON user_rol.rol_id = roles.id
-    `;
-    conexion.query(query, (error, results) => {
-        if (error) {
-            throw error;
-        } else {
-            res.render('tasks.ejs', { tasks: results });
-        }
-    });
-});
-
-
-
-router.get('/tasks/create', isAuthenticated, (req, res) => {
-    conexion.query('SELECT users.id, users.username, roles.role_name FROM users JOIN user_rol ON users.id = user_rol.user_id JOIN roles ON user_rol.rol_id = roles.id', (error, results) => {
-        if (error) throw error;
-        res.render('createTask.ejs', { users: results });
-    });
-});
-
-router.post('/tasks/save', isAuthenticated, (req, res) => {
-    const { title, description, start_date, start_time, end_date, end_time, user_id } = req.body;
-    const query = 'INSERT INTO tasks (title, description, start_date, start_time, end_date, end_time, user_id) VALUES (?, ?, ?, ?, ?, ?, ?)';
-    conexion.query(query, [title, description, start_date, start_time, end_date, end_time, user_id], (error, results) => {
-        if (error) {
-            console.log(error);
-            req.flash('errorMessage', 'Error al crear la tarea');
-        } else {
-            req.flash('successMessage', 'Tarea creada exitosamente');
-        }
-        res.redirect('/tasks');
-    });
-});
-
-router.get('/tasks/edit/:id', isAuthenticated, (req, res) => {
-    const id = req.params.id;
-    conexion.query('SELECT * FROM tasks WHERE id = ?', [id], (error, taskResults) => {
-        if (error) throw error;
-        conexion.query('SELECT users.id, users.username, roles.role_name FROM users JOIN user_rol ON users.id = user_rol.user_id JOIN roles ON user_rol.rol_id = roles.id', (error, userResults) => {
-            if (error) throw error;
-            res.render('editTask.ejs', { task: taskResults[0], users: userResults });
-        });
-    });
-});
-
-router.post('/tasks/update', isAuthenticated, (req, res) => {
-    const { id, title, description, start_date, start_time, end_date, end_time, user_id } = req.body;
-    const query = 'UPDATE tasks SET title = ?, description = ?, start_date = ?, start_time = ?, end_date = ?, end_time = ?, user_id = ? WHERE id = ?';
-    conexion.query(query, [title, description, start_date, start_time, end_date, end_time, user_id, id], (error, results) => {
-        if (error) throw error;
-        res.redirect('/tasks');
-    });
-});
-
-router.get('/tasks/delete/:id', isAuthenticated, (req, res) => {
-    const id = req.params.id;
-    conexion.query('DELETE FROM tasks WHERE id = ?', [id], (error, results) => {
-        if (error) throw error;
-        res.redirect('/tasks');
-    });
-});
-
 
 module.exports = router;
