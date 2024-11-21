@@ -1,22 +1,22 @@
-require('dotenv').config(); // Cargar variables de entorno desde .env
-const mysql = require('mysql2'); // Importando el módulo de base de datos
+require('dotenv').config(); // Cargar variables de entorno
+const mysql = require('mysql2');
 
 // Configuración de la conexión
 const conexion = mysql.createConnection({
-    host: process.env.MYSQLHOST || 'localhost',
-    user: process.env.MYSQLUSER || 'root',
-    password: process.env.MYSQLPASSWORD || '',
-    database: process.env.MYSQLDATABASE || 'crud_nodes_db',
-    port: process.env.MYSQLPORT || 3306
+  host: process.env.MYSQLHOST,
+  user: process.env.MYSQLUSER,
+  password: process.env.MYSQLPASSWORD,
+  database: process.env.MYSQLDATABASE,
+  port: process.env.MYSQLPORT
 });
 
-// Conexión a la base de datos
+// Probar la conexión
 conexion.connect((error) => {
-    if (error) {
-        console.error('El error de conexión es: ' + error.message);
-        return;
-    }
-    console.log('Conectado a la Base de Datos');
+  if (error) {
+    console.error('Error al conectar con la base de datos:', error.message);
+    return;
+  }
+  console.log('Conexión exitosa a la base de datos');
 });
 
 module.exports = conexion;
