@@ -1,16 +1,14 @@
-require('dotenv').config(); // Cargar variables de entorno
+require('dotenv').config();
 const mysql = require('mysql2');
 
-// Configuración de la conexión
 const conexion = mysql.createConnection({
-  host: process.env.MYSQLHOST,
-  user: process.env.MYSQLUSER,
-  password: process.env.MYSQLPASSWORD,
-  database: process.env.MYSQLDATABASE,
-  port: process.env.MYSQLPORT
+  host: process.env.MYSQLHOST, // Host proporcionado por Railway
+  user: process.env.MYSQLUSER, // Usuario proporcionado por Railway
+  password: process.env.MYSQLPASSWORD, // Contraseña proporcionada por Railway
+  database: process.env.MYSQLDATABASE, // Nombre de la base de datos (probablemente "railway")
+  port: process.env.MYSQLPORT // Puerto proporcionado por Railway
 });
 
-// Probar la conexión
 conexion.connect((error) => {
   if (error) {
     console.error('Error al conectar con la base de datos:', error.message);
